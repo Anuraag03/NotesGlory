@@ -10,7 +10,7 @@ const home = async (req, res) => {
   }
 };
 
-const register = async (req, res) => {
+const register = async (req, res, next) => {
   try {
     const { username, email, phone, password } = req.body;
 
@@ -18,15 +18,14 @@ const register = async (req, res) => {
       return res.status(400).json({ message: "Please fill all the fields" });
     }
 
-    const userExists = await User.findOne({ email: email });
+    const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(String(password), saltRounds);
+    const saltRound = 10;
+    const hashedPassword = await bcrypt.hash(String(password), saltRound);
 
-    // Create a new user
     const user = await User.create({
       username,
       email,
@@ -34,18 +33,14 @@ const register = async (req, res) => {
       password: hashedPassword,
     });
 
-    // Generate JWT Token
-    const token = await user.generateToken();
-
     res.status(201).json({
       message: "User registered successfully",
       createdUser: user,
-      token: token,
+      token: await user.generateToken(),
       userId: user._id.toString(),
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    next(error); // Pass the error to the middleware
   }
 };
 
