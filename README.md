@@ -1,1 +1,3 @@
 # NotesGlory
+
+Note Taking App
