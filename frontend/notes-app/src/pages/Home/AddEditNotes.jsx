@@ -1,7 +1,7 @@
 import React,{useState} from "react";
 import TagInput from "../../components/Input/TagInput";
 
-const AddEditNotes = () => {
+const AddEditNotes = (props) => {
 
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
@@ -9,32 +9,39 @@ const AddEditNotes = () => {
 
     const [error,setError] = useState(null);
 
-    const addNewNote= ()=>{
+    const { type, data, token, onNoteAdded, onClose } = props;
 
-    }; 
-    const editNote = () => {
+    React.useEffect(() => {
+        if (type === 'edit' && data) {
+            setTitle(data.title || '');
+            setContent(data.content || '');
+            setTags(data.tags || []);
+        } else {
+            setTitle('');
+            setContent('');
+            setTags([]);
+        }
+    }, [type, data]);
 
-    };
-
-    const handleAddNote = () =>{
-        if(!title){
+    const handleAddNote = async () => {
+        if (!title) {
             setError("Please enter title");
             return;
         }
-        if(!content){
+        if (!content) {
             setError("Please enter content");
             return;
         }
         setError("");
-
-        if(type==="edit"){
-            // Handle edit logic here
-            editNote()
+        if (type === "edit") {
+            const { updateNote } = await import('../../api');
+            await updateNote(token, data._id, { title, content, tags });
+        } else {
+            const { createNote } = await import('../../api');
+            await createNote(token, { title, content, tags });
         }
-        else{
-            addNewNote();
-        }
-
+        if (onNoteAdded) onNoteAdded();
+        if (onClose) onClose();
     }
   return (
     <div>

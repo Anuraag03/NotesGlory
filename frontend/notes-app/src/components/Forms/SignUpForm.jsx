@@ -18,7 +18,13 @@ const SignUpForm = () => {
             setError("Please enter a password");
         } else {
             setError("");
-            // Handle sign up logic here
+            const { register } = await import('../../api');
+            const result = await register(email, password);
+            if (result.message === 'User registered') {
+                window.location.href = '/login';
+            } else {
+                setError(result.error || 'Sign up failed');
+            }
         }
     };
   return (

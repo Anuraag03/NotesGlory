@@ -6,28 +6,60 @@ import AddEditNotes from './AddEditNotes'
 import Modal from 'react-modal'
 Modal.setAppElement('#root');
 const Home = () => {
+  const token = localStorage.getItem('token');
+  const [notes, setNotes] = useState([]);
   const [openAddEditModal, setOpenAddEditModal] = useState({
     isShown: false,
     type:"add",
     data:null,
   });
+
+  React.useEffect(() => {
+    if (token) {
+      import('../../api').then(api => {
+        api.fetchNotes(token).then(setNotes);
+      });
+    }
+  }, [token]);
+  if (!token) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <NavBar/>
+        <h2 className="text-2xl text-gray-700 mt-10">Please log in to view your notes.</h2>
+        <a href="/login" className="mt-4 text-blue-500 underline">Go to Login</a>
+      </div>
+    );
+  }
+  const handleDelete = async (id) => {
+    const { deleteNote } = await import('../../api');
+    await deleteNote(token, id);
+    const { fetchNotes } = await import('../../api');
+    fetchNotes(token).then(setNotes);
+  };
+  const handlePin = async (id, isPinned) => {
+    const { pinNote } = await import('../../api');
+    await pinNote(token, id, !isPinned);
+    const { fetchNotes } = await import('../../api');
+    fetchNotes(token).then(setNotes);
+  };
   return (
     <div className=''>
       <NavBar/>
       <div className='container mx-auto'>
-        <div className="grid grid-cols-3 gap-4 mt-4">
-        <NoteCard
-          title="25th July 25" 
-          date="25th July 2025"
-          content="This is a sample note content for the home page."
-          tags="#sample"
-          isPinned={true}
-          onEdit={() => {}}
-          onDelete={() => {}}
-          onPinNote={() => {}}
-        
-        />
-        </div>
+      <div className="grid grid-cols-3 gap-4 mt-4">
+        {notes && notes.map(note => (
+          <NoteCard
+            key={note._id}
+            title={note.title}
+            date={new Date(note.createdAt).toLocaleDateString()}
+            content={note.content}
+            tags={note.tags?.join(', ')}
+            isPinned={note.isPinned}
+            onEdit={() => setOpenAddEditModal({ isShown: true, type: 'edit', data: note })}
+            onDelete={() => handleDelete(note._id)}
+            onPinNote={() => handlePin(note._id, note.isPinned)}
+          />
+        ))}
       </div>
       <button className='w-16 h-16 flex items-center justify-center rounded-2xl bg-blue-600 hover:bg-blue-800 absolute right-10 bottom-10' onClick={()=>{
         setOpenAddEditModal({
@@ -38,7 +70,6 @@ const Home = () => {
       }}>
         <MdAdd className="text-[32px] text-white"/> 
       </button>
-
       <Modal
         isOpen={openAddEditModal.isShown}
         onRequestClose={() => setOpenAddEditModal({ ...openAddEditModal, isShown: false })}
@@ -50,10 +81,18 @@ const Home = () => {
           type={openAddEditModal.type}
           data={openAddEditModal.data}
           onClose={() => setOpenAddEditModal({ ...openAddEditModal, isShown: false })}
+          token={token}
+          onNoteAdded={() => {
+            import('../../api').then(api => {
+              api.fetchNotes(token).then(setNotes);
+            });
+            setOpenAddEditModal({ ...openAddEditModal, isShown: false });
+          }}
         />
       </Modal>
     </div>
-  )
-}
+    </div>
 
-export default Home
+  );
+}
+export default Home;

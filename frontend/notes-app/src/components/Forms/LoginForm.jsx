@@ -15,7 +15,15 @@ const LoginForm = () => {
             setError('Please enter password');
         } else {
             setError("");
-            // Proceed with login logic here
+            const { login } = await import('../../api');
+            const result = await login(email, password);
+            if (result.token) {
+                localStorage.setItem('token', result.token);
+                localStorage.setItem('name', result.name || 'User');
+                window.location.href = '/dashboard';
+            } else {
+                setError(result.error || 'Login failed');
+            }
         }
     }
   return (
