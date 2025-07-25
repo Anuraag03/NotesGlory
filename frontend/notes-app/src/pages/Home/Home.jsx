@@ -13,6 +13,7 @@ const Home = () => {
     type:"add",
     data:null,
   });
+  const [searchInput, setSearchInput] = useState("");
 
   React.useEffect(() => {
     if (token) {
@@ -42,24 +43,53 @@ const Home = () => {
     const { fetchNotes } = await import('../../api');
     fetchNotes(token).then(setNotes);
   };
+  // Live filter notes using regex search
+  let filteredNotes = notes;
+  if (searchInput.trim()) {
+    try {
+      const regex = new RegExp(searchInput, 'i');
+      filteredNotes = notes.filter(note =>
+        regex.test(note.title) || regex.test(note.content) || (note.tags && note.tags.some(tag => regex.test(tag)))
+      );
+    } catch (e) {
+      // Invalid regex, show all notes
+      filteredNotes = notes;
+    }
+  }
+  const handleInputChange = (e) => {
+    setSearchInput(e.target.value);
+  };
+  const handleClearSearch = () => {
+    setSearchInput("");
+  };
   return (
     <div className=''>
-      <NavBar/>
+      <NavBar
+        searchInput={searchInput}
+        onInputChange={handleInputChange}
+        onClearSearch={handleClearSearch}
+      />
       <div className='container mx-auto'>
       <div className="grid grid-cols-3 gap-4 mt-4">
-        {notes && notes.map(note => (
-          <NoteCard
-            key={note._id}
-            title={note.title}
-            date={new Date(note.createdAt).toLocaleDateString()}
-            content={note.content}
-            tags={note.tags?.join(', ')}
-            isPinned={note.isPinned}
-            onEdit={() => setOpenAddEditModal({ isShown: true, type: 'edit', data: note })}
-            onDelete={() => handleDelete(note._id)}
-            onPinNote={() => handlePin(note._id, note.isPinned)}
-          />
-        ))}
+        {filteredNotes.length > 0 ? (
+          filteredNotes.map(note => (
+            <NoteCard
+              key={note._id}
+              title={note.title}
+              date={new Date(note.createdAt).toLocaleDateString()}
+              content={note.content}
+              tags={note.tags?.join(', ')}
+              isPinned={note.isPinned}
+              onEdit={() => setOpenAddEditModal({ isShown: true, type: 'edit', data: note })}
+              onDelete={() => handleDelete(note._id)}
+              onPinNote={() => handlePin(note._id, note.isPinned)}
+            />
+          ))
+        ) : (
+          notes.length > 0 ? (
+            <div className="col-span-3 text-center text-gray-400 text-xl mt-10">No matching notes found.</div>
+          ) : null
+        )}
       </div>
       <button className='w-16 h-16 flex items-center justify-center rounded-2xl bg-blue-600 hover:bg-blue-800 absolute right-10 bottom-10' onClick={()=>{
         setOpenAddEditModal({
