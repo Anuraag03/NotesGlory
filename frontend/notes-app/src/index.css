@@ -37,10 +37,26 @@
   border-radius: 0.25rem; /* rounded = 4px */
   margin-top: 0.25rem;     /* my-1 = 4px vertical */
   margin-bottom: 0.25rem;
+  cursor:pointer;
 }
 
 .btn-primary:hover {
-  background-color: #04264d; /* hover:bg-blue-300 */
+  background-color: #074d9d; /* hover:bg-blue-300 */
+}
+
+.icon-btn{
+  font-size: 1.25rem; /* text-xl */
+  color: #fff; /* text-white */
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.icon-btn:hover {
+  color: #ff0000; /* text-blue-500 */
+}
+
+.input-label{
+  font-size: 0.75rem; /* text-xs */
+  color: #fff; /* text-white */
 }
 
 }
