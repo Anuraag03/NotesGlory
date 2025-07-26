@@ -10,9 +10,21 @@ import notesRoutes from './routes/notes.js';
 import filesRouter from './routes/files.js';
 
 const app = express();
+
+// Only allow your deployed frontend
+const allowedOrigins = ['https://notes-glory-tt3f.vercel.app','http://localhost:5173' ];
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like Postman, curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
 }));
 app.use(express.json());
 
