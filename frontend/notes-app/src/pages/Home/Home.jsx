@@ -1,9 +1,11 @@
 import React,{useState} from 'react'
 import NavBar from '../../components/NavBar/NavBar'
 import NoteCard from '../../components/Cards/NoteCard'
-import {MdAdd} from 'react-icons/md'
+import { MdAdd, MdNoteAdd, MdAttachFile, MdClose } from 'react-icons/md'
 import AddEditNotes from './AddEditNotes'
 import Modal from 'react-modal'
+import { uploadFile, deleteFile } from '../../api';
+import Filelist from '../../components/Cards/Filelist'; // Make sure this matches the filename and export
 Modal.setAppElement('#root');
 const Home = () => {
   const token = localStorage.getItem('token');
@@ -14,11 +16,17 @@ const Home = () => {
     data:null,
   });
   const [searchInput, setSearchInput] = useState("");
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  // Add a state to store uploaded files metadata
+  const [files, setFiles] = useState([]);
 
   React.useEffect(() => {
     if (token) {
       import('../../api').then(api => {
         api.fetchNotes(token).then(setNotes);
+        api.fetchFiles(token).then(setFiles);
       });
     }
   }, [token]);
@@ -62,6 +70,24 @@ const Home = () => {
   const handleClearSearch = () => {
     setSearchInput("");
   };
+  const handleFileDelete = async (id) => {
+    await deleteFile(token, id);
+    setFiles(files => files.filter(f => f.id !== id));
+  };
+  // Filter files based on search input
+  let filteredFiles = files;
+  if (searchInput.trim()) {
+    try {
+      const regex = new RegExp(searchInput, 'i');
+      filteredFiles = files.filter(
+        file =>
+          regex.test(file.filename) ||
+          regex.test(file.contentType)
+      );
+    } catch (e) {
+      filteredFiles = files;
+    }
+  }
   return (
     <div className=''>
       <NavBar
@@ -80,6 +106,7 @@ const Home = () => {
               content={note.content}
               tags={note.tags?.join(', ')}
               isPinned={note.isPinned}
+              files={files.filter(f => f.noteId === note._id)}
               onEdit={() => setOpenAddEditModal({ isShown: true, type: 'edit', data: note })}
               onDelete={() => handleDelete(note._id)}
               onPinNote={() => handlePin(note._id, note.isPinned)}
@@ -91,15 +118,110 @@ const Home = () => {
           ) : null
         )}
       </div>
-      <button className='w-16 h-16 flex items-center justify-center rounded-2xl bg-blue-600 hover:bg-blue-800 absolute right-10 bottom-10' onClick={()=>{
-        setOpenAddEditModal({
-          isShown: true,
-          type: "add",
-          data: null,
-        });
-      }}>
-        <MdAdd className="text-[32px] text-white"/> 
+
+      {/* Place Filelist here */}
+      <Filelist files={filteredFiles} onDelete={handleFileDelete} />
+
+      <button
+        className='w-16 h-16 flex items-center justify-center rounded-2xl bg-blue-600 hover:bg-blue-800 absolute right-10 bottom-10'
+        onClick={() => setShowAddMenu(true)}
+      >
+        <MdAdd className="text-[32px] text-white cursor-pointer"/>
       </button>
+
+      {/* Add menu modal */}
+      {showAddMenu && (
+        <div className="fixed inset-0 z-50 flex items-end justify-end">
+          {/* Overlay click to close */}
+          <div
+            className="absolute inset-0"
+            onClick={() => setShowAddMenu(false)}
+          />
+          {/* Popup */}
+          <div className="relative mr-12 mb-24">
+            {/* Triangle */}
+            <div className="absolute -top-3 right-6 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white/0" />
+            <div className="rounded-xl shadow-2xl p-2 flex flex-col bg-gray-900 min-w-[220px]">
+              <button
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition"
+                onClick={() => {
+                  setOpenAddEditModal({ isShown: true, type: "add", data: null });
+                  setShowAddMenu(false);
+                }}
+              >
+                <MdNoteAdd className="text-blue-600 text-2xl" />
+                <span className="text-white font-medium ">Add Note</span>
+              </button>
+              <button
+                className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg hover:bg-gray-700 transition"
+                onClick={() => {
+                  setShowFileModal(true);
+                  setShowAddMenu(false);
+                }}
+              >
+                <MdAttachFile className="text-green-600 text-2xl" />
+                <span className="text-white font-medium">Add File</span>
+              </button>
+              <button
+                className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer hover:bg-gray-700 transition"
+                onClick={() => setShowAddMenu(false)}
+              >
+                <MdClose className="text-red-500 text-2xl" />
+                <span className="text-white font-medium cursor-pointer">Cancel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* File upload modal */}
+      {showFileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="bg-gray-900 rounded-lg p-6 flex flex-col gap-4">
+            <h2 className="text-xl text-white font-bold mb-2">Upload File</h2>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,image/*,video/*"
+              onChange={e => setSelectedFile(e.target.files[0])}
+              className="block w-full text-white file:mr-4 file:py-2 cursor-pointer file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 bg-transparent p-0"
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded hover:bg-blue-700"
+                onClick={async () => {
+                  if (!selectedFile) return;
+                  const res = await uploadFile(token, selectedFile);
+                  // Only keep serializable fields
+                  setFiles(prev => [
+                    ...prev,
+                    {
+                      id: res.fileId || res.id || res._id, // adapt to your backend response
+                      filename: res.filename,
+                      contentType: res.contentType,
+                      length: res.length,
+                      uploadDate: res.uploadDate,
+                    }
+                  ]);
+                  setShowFileModal(false);
+                  setSelectedFile(null);
+                }}
+              >
+                Upload
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-300 cursor-pointer text-black rounded hover:bg-gray-400"
+                onClick={() => {
+                  setShowFileModal(false);
+                  setSelectedFile(null);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Modal
         isOpen={openAddEditModal.isShown}
         onRequestClose={() => setOpenAddEditModal({ ...openAddEditModal, isShown: false })}
@@ -120,6 +242,7 @@ const Home = () => {
           }}
         />
       </Modal>
+
     </div>
     </div>
 

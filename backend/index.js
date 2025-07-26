@@ -1,30 +1,33 @@
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
-import express from 'express';
-import cors from 'cors';
-import jwt from 'jsonwebtoken';
-const app = express();
 dotenv.config();
-app.use(cors());
-app.use(express.json());
 
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
 
 import authRoutes from './routes/auth.js';
 import notesRoutes from './routes/notes.js';
+import filesRouter from './routes/files.js';
 
-
-
+const app = express();
+app.use(cors());
+app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', notesRoutes);
+app.use('/api/files', filesRouter);
 
 app.get('/', (req, res) => {
-    res.send('NotesGlory backend running!');
-});
-
-app.listen(3000, () => {
-    console.log('Server is running on port 3000');
+  res.send('NotesGlory backend running!');
 });
 
 mongoose.connect(process.env.MONGODB_URI)
-export default app;
+  .then(() => {
+    console.log('MongoDB connected');
+    app.listen(3000, () => {
+      console.log('Server is running on port 3000');
+    });
+  })
+  .catch(err => {
+    console.error('MongoDB connection failed:', err);
+  });

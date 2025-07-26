@@ -69,3 +69,42 @@ export async function pinNote(token, id, isPinned) {
   });
   return res.json();
 }
+
+export async function uploadFile(token, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_URL}/files/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`
+      // Do NOT set Content-Type, browser will set it for FormData
+    },
+    body: formData
+  });
+  return res.json();
+}
+
+// Fetch all files metadata
+export async function fetchFiles(token) {
+  const res = await fetch(`${API_URL}/files`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch files');
+  }
+
+  return await res.json();
+}
+
+export async function deleteFile(token, id) {
+  const res = await fetch(`${API_URL}/files/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+}
+
